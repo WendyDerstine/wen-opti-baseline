@@ -17,7 +17,9 @@
     "cms:push:all": "node --env-file=.env scripts/cms-push.mjs --all",
     "schema:pull": "node scripts/fetch-openapi.mjs",
     "seed:hero": "node scripts/seed-atomic-hero.mjs",
-    "cms:check": "node --env-file=.env scripts/check-content-types.mjs"
+    "cms:check": "node --env-file=.env scripts/check-content-types.mjs",
+    "mark-tools:token": "node -e \"console.log(require('node:crypto').randomBytes(32).toString('base64url'))\"",
+    "test:mark-tools": "node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"lib/mark-tools/__tests__/*.test.ts\""
   },
   "dependencies": {
     "@optimizely/cms-cli": "^2.0.0",
