@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Search, Trash2, X } from 'lucide-react';
@@ -117,9 +117,12 @@ export default function ContentTypeExplorer({
   const allSelected = visible.length > 0 && selectedKeys.size === visible.length;
   const someSelected = selectedKeys.size > 0 && selectedKeys.size < visible.length;
 
-  if (selectAllRef.current) {
-    selectAllRef.current.indeterminate = someSelected;
-  }
+  // `indeterminate` is a DOM-only property (no HTML attribute), so sync it after render.
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = someSelected;
+    }
+  }, [someSelected]);
 
   function toggleSelectAll() {
     if (allSelected) {
