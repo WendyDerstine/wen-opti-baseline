@@ -1,13 +1,14 @@
 /**
  * Site config — the single place to rebrand the non-colour chrome for a new
  * demo. Colours live in app/globals.css (the `@theme` token block); everything
- * else — site name, logo, nav links, footer columns, legal copy — lives here.
+ * else — site name, logo, header links, footer columns, legal copy — lives here.
+ * The primary nav itself comes from the CMS content tree (lib/navTree.ts).
  *
  * To stand up a new demo: edit this file, drop a new public/logo.svg, and tweak
  * the hex values in app/globals.css. No component edits required.
  */
 
-export type NavLink = { label: string; href: string };
+export type NavLink = { label: string; href: string; external?: boolean };
 export type FooterColumn = { heading: string; links: NavLink[] };
 
 export const siteConfig = {
@@ -29,14 +30,15 @@ export const siteConfig = {
     { label: 'Support', href: '#' },
   ] satisfies NavLink[],
 
-  /** Primary header navigation. */
-  mainNavLinks: [
-    { label: 'Products', href: '#' },
-    { label: 'Solutions', href: '#' },
-    { label: 'Customers', href: '#' },
-    { label: 'Resources', href: '#' },
-    { label: 'Pricing', href: '#' },
-  ] satisfies NavLink[],
+  /**
+   * Primary header navigation is built from the CMS content tree (lib/navTree.ts):
+   * the start page, then its child pages, with deeper pages in a dropdown.
+   * These two settings are the only static parts.
+   */
+  /** Label for the start page (the CMS names it after the site). */
+  homeNavLabel: 'Home',
+  /** Links that are not CMS pages (external sites, etc.), appended after the tree. */
+  mainNavExtraLinks: [] as NavLink[],
   /** Header call-to-action button. */
   primaryCta: { label: 'Get started free', href: '#' } satisfies NavLink,
   /** Account / login button label. */
