@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# opti-baseline
 
-## Getting Started
+Next.js 16 front end for **Optimizely CMS (SaaS)** demos. `main` is the clean baseline; every demo
+site is its own branch, checked out in its own git worktree with its own `.env`, all talking to one
+shared CMS instance.
 
-First, run the development server:
+- Content comes from Optimizely Graph through `@optimizely/cms-sdk` (`app/[locale]/[[...slug]]`).
+- Content types are code: `cms/*.tsx` (definition + React component), registered in `cms/registry.ts`.
+- The main nav is built from the CMS content tree (`lib/navTree.ts`); the rest of the chrome comes
+  from `lib/siteConfig.ts`, colours from `app/globals.css`.
+- `/admin` is a content type inspector behind HTTP Basic auth (`ADMIN_PASSWORD`).
+
+## Spin up a new demo
+
+Run from the **main** checkout. Its `.env` holds the shared CMS and Graph credentials and points
+`HOME_PAGE_CONTENT_ID` / `ASSET_BASE_FOLDER_ID` at the SaaS content root and assets root, which
+become the parents of the new site's start page and asset folder. Commit any tooling changes on
+`main` first: the new branch only gets what is committed.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+yarn site:new acme --prefix Acme --name "Acme Corp" --dry   # check the plan, changes nothing
+yarn site:new acme --prefix Acme --name "Acme Corp"
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| Argument | Meaning |
+|---|---|
+| `acme` | Branch name, lowercase with hyphens. Must not exist locally or on `origin`. |
+| `--prefix Acme` | PascalCase prefix for this site's content types (`AcmeHeroBlock`, `[ACME] Hero Banner`). Must be unused in the CMS. |
+| `--name "Acme Corp"` | Display name for the start page, CMS application and asset folder. |
+| `--host`, `--port`, `--dir`, `--from` | Optional overrides. Defaults: `<branch>.<your domain>`, lowest free port from 3035, `../opti-baseline-<branch>`, `main`. |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`site:new` creates, in order:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. a `BlankExperience` start page (draft) under the shared content root,
+2. an asset folder for shared blocks under the shared assets root,
+3. a CMS application with the public hostname and a `localhost:<port>` preview host (never the
+   instance default),
+4. publishes the start page, then confirms Graph filed it under the new hostname,
+5. the git worktree on the new branch (no commit),
+6. the worktree's `.env`: shared credentials copied from this checkout, site values filled in
+   (`SITE_BRANCH`, `SITE_PREFIX`, `PORT`, `DEPLOYED_URL`, `HOME_PAGE_CONTENT_ID`,
+   `ASSET_BASE_FOLDER_ID`) and a fresh `ADMIN_PASSWORD` and `MARK_TOOLS_TOKEN`,
+7. `yarn install` (skip with `--no-install`).
 
-## Learn More
+Every step is idempotent: if a run fails part-way, fix the cause and re-run with `--resume`.
+It does **not** set up DNS or hosting for the hostname, deploy, or commit.
 
-To learn more about Next.js, take a look at the following resources:
+Then, in the new worktree:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+cd ../opti-baseline-acme
+yarn dev          # http://localhost:<PORT>
+yarn cms:align    # baseline types in sync
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Building the replica
 
-## Deploy on Vercel
+The full pipeline (Site Recon agent, CMS Block Architect agent, CMS Page Builder and Verifier agent)
+is in the `/site-replica` Mark skill. The scripts it relies on:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Command | What it does |
+|---|---|
+| `yarn cms:align` | Compares `cms/*.tsx` with the live content types and lints them. Read only. `--fix-allowed` adds your types to lists such as `Page > Content` (union only, never removes). |
+| `yarn cms:push` | Pushes content types that are missing from the CMS (`--dry` first). Never updates existing ones. |
+| `yarn cms:bulk --spec scripts/specs/<file>.json` | Creates, updates and publishes shared blocks from a spec (`--dry` first). See `scripts/specs/README.md`. |
+| `yarn cms:e2e` | Checks every published page of this site: Graph, CMS publish state, composition tree, shared block references and rendered HTML. Read only; renders against the local dev server when it is running. |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## The `main` application
+
+`main` has its own CMS application (`main.optimoey.com`, preview `localhost:3034`) with an empty
+start page, and it is the instance **default** application. Content published outside any site's
+tree is filed under the default application's host in Graph, so it lands in `main` and never in a
+demo site's nav. Site applications are never the default. Graph stamps a page's host when it is
+published, so re-publish a page if it was published before its application existed.
+
+## Rules that keep the shared CMS safe
+
+- **One site per worktree.** The scripts refuse to run when `SITE_BRANCH` in `.env` is not the
+  checked-out branch, and refuse CMS writes from `main`.
+- **Prefix everything.** Every type a site adds starts with its `SITE_PREFIX` (`cms:align` rule L6).
+  Only the baseline types on `main` (`Page`, `RichTextBlock`) are unprefixed.
+- **Never narrow shared lists.** `Page > Content` allows blocks from every site. A CMS list that is
+  a superset of the code is expected (`CMS+` in `cms:align`), not drift.
+- **Verify locally.** Deploying is not part of verification: use `yarn dev` and `yarn cms:e2e`.
+
+## Environment
+
+Copy `.env.example` to `.env` for a manual setup (`site:new` writes it for you). Required to run:
+`OPTIMIZELY_GRAPH_SINGLE_KEY`. The scripts also need `OPTIMIZELY_CMS_CLIENT_ID` /
+`OPTIMIZELY_CMS_CLIENT_SECRET`, `DEPLOYED_URL`, `HOME_PAGE_CONTENT_ID` and `ASSET_BASE_FOLDER_ID`.
+`PORT` sets the dev server port (`scripts/run-next.mjs`).
+
+## Learn more
+
+- [Optimizely CMS (SaaS) documentation](https://docs.optimizely.com/content-management-system/)
+- [Next.js documentation](https://nextjs.org/docs)
