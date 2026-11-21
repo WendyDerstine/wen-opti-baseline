@@ -26,7 +26,10 @@
  *   --name "<Name>"        site display name (required): start page, application and asset folder
  *   --host <host>          public hostname (default: <branch>.<domain of this checkout's DEPLOYED_URL>)
  *   --port <n>             local dev port (default: lowest free port >= 3035)
- *   --dir <path>           worktree folder (default: ../opti-baseline-<branch> next to this checkout)
+ *   --opp <Folder>         opportunity folder under the Opps root. The site is created at
+ *                          <Opps>/<Folder>/opti-baseline-<branch> (folder created when missing).
+ *                          Default: a folder named like the branch.
+ *   --dir <path>           exact worktree folder, absolute path (use instead of --opp)
  *   --from <ref>           branch to cut from (default: main)
  *   --content-root <key>   parent of start pages (default: HOME_PAGE_CONTENT_ID in the main checkout's
  *                          .env, which is the SaaS content root; a start page key also works: its container is used)
@@ -39,12 +42,18 @@
  * Run it from the main checkout: its .env holds the shared CMS/Graph credentials and points
  * HOME_PAGE_CONTENT_ID / ASSET_BASE_FOLDER_ID at the SaaS root containers. The `main` application is
  * the CMS default; new site applications never are.
+ *
+ * Folder layout: the main checkout is the permanent hub (<Opps>/<hub folder>/<checkout>); every site
+ * is a git worktree of it, placed next to your other opportunities: <Opps>/<opportunity>/opti-baseline-<site>.
+ * The Opps root is two levels above this checkout (override with the OPPS_ROOT environment variable).
+ * Port choice also reads the .env of every <Opps>/<opportunity>/<folder> checkout, so a new site never
+ * reuses a port that one of your older clones already claims.
  */
 
 import { randomBytes } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 
 import {
   BASE_BRANCH,
@@ -112,6 +121,36 @@ function worktreePorts() {
   return ports;
 }
 
+// ── Ports claimed by other checkouts ─────────────────────────────────────────────────────────
+/**
+ * Ports in the .env of every <oppsRoot>/<opportunity>/<folder> checkout. Your older clones are not git
+ * worktrees of this repo, so worktreePorts() cannot see them.
+ */
+function otherCheckoutPorts(oppsRoot) {
+  const ports = new Map();
+  let scanned = 0;
+  const subdirs = (p) => {
+    try {
+      return readdirSync(p, { withFileTypes: true })
+        .filter((d) => d.isDirectory() && !d.name.startsWith('.'))
+        .map((d) => join(p, d.name));
+    } catch {
+      return [];
+    }
+  };
+  for (const opp of subdirs(oppsRoot)) {
+    for (const site of subdirs(opp)) {
+      const file = join(site, '.env');
+      if (!existsSync(file)) continue;
+      scanned++;
+      const raw = String(readEnvFile(file).get('PORT') ?? '').split('#')[0].replace(/["']/g, '').trim();
+      const n = Number(raw);
+      if (raw && Number.isInteger(n) && n > 0 && !ports.has(n)) ports.set(n, file);
+    }
+  }
+  return { ports, scanned };
+}
+
 // ── Validation ──────────────────────────────────────────────────────────────
 function validateInputs() {
   const problems = [];
@@ -129,6 +168,13 @@ function validateInputs() {
   if (!name) problems.push('missing --name (site display name, e.g. --name "Acme Corp")');
 
   if (args.port !== undefined && !/^\d{4,5}$/.test(String(args.port))) problems.push('--port must be a number');
+  if (args.opp !== undefined) {
+    const opp = typeof args.opp === 'string' ? args.opp.trim() : '';
+    if (args.dir !== undefined) problems.push('use either --opp or --dir, not both');
+    if (!opp || !/^[A-Za-z0-9][A-Za-z0-9 ._-]*$/.test(opp) || opp.includes('..')) {
+      problems.push('--opp must be a folder name (letters, digits, spaces, dots, hyphens, underscores), e.g. --opp Acme');
+    }
+  }
   if (problems.length) throw new Error(`Invalid input:\n  - ${problems.join('\n  - ')}`);
   return { branch, prefix, name };
 }
@@ -148,7 +194,25 @@ async function main() {
   if (git(['rev-parse', '--verify', '--quiet', `${from}^{commit}`]) === null) problems.push(`base ref "${from}" does not exist`);
   const localBranch = git(['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`]) !== null;
   const remoteBranch = git(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${branch}`]) !== null;
-  const dir = resolve(typeof args.dir === 'string' ? (isAbsolute(args.dir) ? args.dir : resolve(process.cwd(), args.dir)) : join(dirname(top), `opti-baseline-${branch}`));
+  const oppsRoot = resolve(process.env.OPPS_ROOT || dirname(dirname(top)));
+  const hubName = basename(dirname(top));
+  let oppFolder = null;
+  let dir;
+  if (typeof args.dir === 'string') {
+    dir = resolve(isAbsolute(args.dir) ? args.dir : resolve(process.cwd(), args.dir));
+  } else {
+    oppFolder = typeof args.opp === 'string' ? args.opp.trim() : branch;
+    dir = join(oppsRoot, oppFolder, 'opti-baseline-' + branch);
+    if (!process.env.OPPS_ROOT && basename(oppsRoot) !== 'Opps') {
+      problems.push('could not locate your Opps folder (expected this checkout at <Opps>/<folder>/<checkout>, but the root would be ' + oppsRoot + '). Set OPPS_ROOT, or pass --dir <absolute path>');
+    }
+    if (oppFolder === hubName) {
+      problems.push('"' + oppFolder + '" is the folder that holds this main checkout; choose the opportunity folder for the new site with --opp');
+    }
+    if (typeof args.opp !== 'string') {
+      notes.push('no --opp given: using an opportunity folder named like the branch ("' + oppFolder + '"). Pass --opp <Folder> to use an existing opportunity folder.');
+    }
+  }
   const worktrees = (git(['worktree', 'list', '--porcelain']) ?? '').split('\n\n');
   const existingWt = worktrees.find((w) => w.startsWith(`worktree ${dir}\n`));
   const wtOnBranch = existingWt?.includes(`branch refs/heads/${branch}`);
@@ -227,7 +291,8 @@ async function main() {
   const hostOwner = apps.find((a) => a.key !== appKey && (a.hosts ?? []).some((h) => h.authority.toLowerCase() === host));
   if (hostOwner) problems.push(`hostname ${host} is already used by application "${hostOwner.key}" (${hostOwner.displayName})`);
 
-  const usedPorts = new Set([...listeningPorts(), ...worktreePorts()]);
+  const other = (process.env.OPPS_ROOT || basename(oppsRoot) === 'Opps') ? otherCheckoutPorts(oppsRoot) : { ports: new Map(), scanned: 0 };
+  const usedPorts = new Set([...listeningPorts(), ...worktreePorts(), ...other.ports.keys()]);
   for (const a of apps) for (const h of a.hosts ?? []) {
     const m = /^localhost:(\d+)$/.exec(h.authority);
     if (m && a.key !== appKey) usedPorts.add(Number(m[1]));
@@ -236,7 +301,8 @@ async function main() {
   const ownPreview = existingApp?.hosts?.find((h) => /^localhost:\d+$/.test(h.authority));
   if (!port && ownPreview) port = Number(ownPreview.authority.split(':')[1]); // resume keeps its port
   if (port && usedPorts.has(port) && !(ownPreview && port === Number(ownPreview.authority.split(':')[1]))) {
-    problems.push(`port ${port} is already used (a running server, another worktree's .env, or another CMS application)`);
+    const claimed = other.ports.get(port);
+    problems.push('port ' + port + ' is already used' + (claimed ? ' by ' + claimed : " (a running server, another checkout's .env, or another CMS application)"));
   }
   if (!port) for (port = MIN_PORT; usedPorts.has(port); port++);
 
@@ -248,10 +314,10 @@ async function main() {
   // ── Plan ──
   step('Plan');
   say(`branch        ${branch}  (from ${from})${localBranch ? c.dim('  exists, resuming') : ''}`);
-  say(`worktree      ${dir}`);
+  say('worktree      ' + dir + (oppFolder ? c.dim(existsSync(dirname(dir)) ? '  (opportunity folder exists)' : '  (opportunity folder will be created)') : ''));
   say(`site name     ${name}`);
   say(`prefix        ${prefix}  (types like ${prefix}HeroBlock, display names like [${prefix.toUpperCase()}] Hero Banner)`);
-  say(`port          ${port}  (http://localhost:${port})`);
+  say('port          ' + port + '  (http://localhost:' + port + c.dim('; also checked ' + other.scanned + ' other .env files under ' + oppsRoot) + ')');
   say(`DEPLOYED_URL  https://${host}`);
   say(`start page    ${startKey}  BlankExperience "${name}" under ${contentRoot}`);
   say(`asset folder  ${assetKey}  "${name}" under ${assetsRoot}`);
@@ -317,8 +383,16 @@ async function main() {
     });
     console.log(`  ${ok(`created application ${appKey}`)}`);
   } else console.log(`  ${ok('exists')}`);
-  const check = await cms.get(`/v1/applications/${appKey}`);
-  if (check.data.isDefault) console.log(`  ${warn('this application is marked as the instance default; change that in the CMS if it was not intended')}`);
+  // A newly created application can take a moment to become readable (eventual consistency, like
+  // content versions). Wait for it before publishing, so the page is filed under the new host.
+  let check = null;
+  for (let i = 0; i < 8 && !check; i++) {
+    if (i) await sleep(700 * i);
+    const r = await cms.get('/v1/applications/' + appKey, { allow: [404] });
+    if (r.status !== 404) check = r.data;
+  }
+  if (!check) throw new Error('application ' + appKey + ' was created but is not readable yet; wait a moment and re-run with --resume');
+  if (check.isDefault) console.log(`  ${warn('this application is marked as the instance default; change that in the CMS if it was not intended')}`);
 
   // ── 4. publish the start page (only now that the application exists) ──
   // Graph computes a page's URL base from the application that owns it AT PUBLISH TIME. Publishing
@@ -359,6 +433,7 @@ async function main() {
   // ── 5. worktree ──
   step('5/7 git worktree');
   if (!localBranch) {
+    mkdirSync(dirname(dir), { recursive: true });
     const r = spawnSync('git', ['worktree', 'add', '--no-track', '-b', branch, dir, from], { cwd: ROOT, stdio: 'inherit' });
     if (r.status !== 0) throw new Error('git worktree add failed (the CMS objects exist; fix the problem and re-run with --resume)');
   } else console.log(`  ${ok(`exists at ${dir}`)}`);
@@ -388,10 +463,11 @@ async function main() {
       if (!m) return line;
       const k = m[1];
       written.add(k);
+      if (['SITE_BRANCH', 'SITE_PREFIX', 'SITE_NAME'].includes(k)) return null; // written once, in the header
       if (site.has(k)) return `${k}=${site.get(k)}`;
       if (srcEnv.has(k) && !SITE_SPECIFIC_KEYS.has(k)) return `${k}=${srcEnv.get(k)}`;
       return line;
-    });
+    }).filter((l) => l !== null);
     const header = [
       '# Written by `yarn site:new` — this file belongs to ONE site replica (gitignored).',
       '# --- Site identity (the scripts refuse to run when SITE_BRANCH != the checked-out branch) ---',
@@ -414,16 +490,20 @@ async function main() {
     if (r.status !== 0) console.log(`  ${warn('yarn install failed; run it manually in the worktree')}`);
   }
 
+  const BS = String.fromCharCode(92);
+  const quoted = (p) => (p.includes(' ') ? '"' + p + '"' : p);
+  const winPath = process.env.WSL_DISTRO_NAME ? BS + BS + 'wsl.localhost' + BS + process.env.WSL_DISTRO_NAME + dir.split('/').join(BS) : null;
+
   // ── Done ──
   console.log(`\n${ok(c.bold(`site ${branch} is ready`))}`);
   console.log(`
   Next:
-    cd ${dir}
+    cd ${quoted(dir)}
     yarn dev                 # http://localhost:${port}  (CMS preview host is registered for this port)
     yarn cms:align           # baseline types in sync; your ${prefix}* blocks will show up here
 
   Then follow the /site-replica playbook from Step 1 (Site Recon) in this worktree.
-  In Mark Desktop, attach ${dir} as the working folder for this site.
+  In Mark Desktop, attach ${winPath ?? dir} as the working folder for this site.
 
   Not done for you (on purpose): DNS / hosting for ${host}, deploying, committing.`);
 }
