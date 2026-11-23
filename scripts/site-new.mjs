@@ -45,7 +45,8 @@
  *
  * Folder layout: the main checkout is the permanent hub (<Opps>/<hub folder>/<checkout>); every site
  * is a git worktree of it, placed next to your other opportunities: <Opps>/<opportunity>/opti-baseline-<site>.
- * The Opps root is two levels above this checkout (override with the OPPS_ROOT environment variable).
+ * The Opps root is the folder two levels above this checkout, whatever it is named (override with the
+ * OPPS_ROOT environment variable; falls back to ~/Opps when that location is unusable).
  * Port choice also reads the .env of every <Opps>/<opportunity>/<folder> checkout, so a new site never
  * reuses a port that one of your older clones already claims.
  */
@@ -53,7 +54,8 @@
 import { randomBytes } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
+import { homedir } from 'node:os';
+import { basename, dirname, isAbsolute, join, parse, resolve } from 'node:path';
 
 import {
   BASE_BRANCH,
@@ -151,6 +153,19 @@ function otherCheckoutPorts(oppsRoot) {
   return { ports, scanned };
 }
 
+// ── Opps root ────────────────────────────────────────────────────────────────────────────────
+/**
+ * The folder that holds your opportunity folders. OPPS_ROOT wins; otherwise it is the folder two
+ * levels above this checkout (<root>/<hub folder>/<checkout>) whatever it is called. Only when that
+ * location is unusable (the filesystem root or your home directory itself) fall back to ~/Opps.
+ */
+function resolveOppsRoot(top) {
+  if (process.env.OPPS_ROOT) return resolve(process.env.OPPS_ROOT);
+  const guess = dirname(dirname(top));
+  if (guess === parse(guess).root || guess === homedir()) return join(homedir(), 'Opps');
+  return guess;
+}
+
 // ── Validation ──────────────────────────────────────────────────────────────
 function validateInputs() {
   const problems = [];
@@ -194,7 +209,7 @@ async function main() {
   if (git(['rev-parse', '--verify', '--quiet', `${from}^{commit}`]) === null) problems.push(`base ref "${from}" does not exist`);
   const localBranch = git(['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`]) !== null;
   const remoteBranch = git(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${branch}`]) !== null;
-  const oppsRoot = resolve(process.env.OPPS_ROOT || dirname(dirname(top)));
+  const oppsRoot = resolveOppsRoot(top);
   const hubName = basename(dirname(top));
   let oppFolder = null;
   let dir;
@@ -203,9 +218,6 @@ async function main() {
   } else {
     oppFolder = typeof args.opp === 'string' ? args.opp.trim() : branch;
     dir = join(oppsRoot, oppFolder, 'opti-baseline-' + branch);
-    if (!process.env.OPPS_ROOT && basename(oppsRoot) !== 'Opps') {
-      problems.push('could not locate your Opps folder (expected this checkout at <Opps>/<folder>/<checkout>, but the root would be ' + oppsRoot + '). Set OPPS_ROOT, or pass --dir <absolute path>');
-    }
     if (oppFolder === hubName) {
       problems.push('"' + oppFolder + '" is the folder that holds this main checkout; choose the opportunity folder for the new site with --opp');
     }
@@ -291,7 +303,7 @@ async function main() {
   const hostOwner = apps.find((a) => a.key !== appKey && (a.hosts ?? []).some((h) => h.authority.toLowerCase() === host));
   if (hostOwner) problems.push(`hostname ${host} is already used by application "${hostOwner.key}" (${hostOwner.displayName})`);
 
-  const other = (process.env.OPPS_ROOT || basename(oppsRoot) === 'Opps') ? otherCheckoutPorts(oppsRoot) : { ports: new Map(), scanned: 0 };
+  const other = otherCheckoutPorts(oppsRoot);
   const usedPorts = new Set([...listeningPorts(), ...worktreePorts(), ...other.ports.keys()]);
   for (const a of apps) for (const h of a.hosts ?? []) {
     const m = /^localhost:(\d+)$/.exec(h.authority);

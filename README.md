@@ -76,7 +76,7 @@ cloning it again. Each branch can be checked out in only one folder at a time.
 - **Remove a site cleanly** with `git worktree remove <folder>` from the hub, not by deleting the folder
   (`git worktree prune` cleans up if you already did). Then delete its CMS application, start page and
   asset folder.
-- **The Opps root** is two levels above the hub checkout; set `OPPS_ROOT` if yours is elsewhere.
+- **The Opps root** is the folder two levels above the hub checkout, whatever it is named. Set `OPPS_ROOT` to use another location; if the folder two levels up is unusable (the filesystem root or your home directory), `~/Opps` is used.
 - **Ports** come from each site's `.env`. `site:new` avoids ports used by running servers, by CMS preview
   hosts, and by every `Opps/<opportunity>/<folder>/.env`.
 
