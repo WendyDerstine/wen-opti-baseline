@@ -2,9 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import DevQuickLinksMenu, { type QuickLink } from './DevQuickLinksMenu';
 
-// Top-level folders under app/ that are never listed ("[locale]" and other
+// Top-level folders under app/ that are never listed (api, preview) ("[locale]" and other
 // dynamic / private / parallel folders are skipped by the walker itself).
-const EXCLUDED_ROOTS = new Set(['api']);
+const EXCLUDED_ROOTS = new Set(['api', 'preview']);
 const HOME_LINK: QuickLink = { label: 'Home', href: '/' };
 const PAGE_FILE = /^page\.(tsx|ts|jsx|js|mdx)$/;
 
