@@ -427,7 +427,7 @@ const ENV_ROWS: [setting: string, purpose: React.ReactNode, who: string][] = [
     </>,
     'Facilitator / site:new',
   ],
-  ['SITE_BRANCH / SITE_PREFIX / SITE_NAME', 'Which demo site this folder belongs to. Used by safety checks.', 'site:new'],
+  ['SITE_BRANCH / SITE_PREFIX / APP_SITE_NAME', 'Which demo site this folder belongs to. Used by safety checks.', 'site:new'],
   [
     'HOME_PAGE_CONTENT_ID / ASSET_BASE_FOLDER_ID',
     'Where the site’s pages and shared content live in the CMS.',

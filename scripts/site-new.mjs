@@ -88,7 +88,7 @@ const DEFAULT_PREVIEW_FORMATS = { any: '{host}/preview?key={key}&ver={version}&l
 
 // Keys that belong to ONE site and are never copied from this checkout's .env.
 const SITE_SPECIFIC_KEYS = new Set([
-  'SITE_BRANCH', 'SITE_PREFIX', 'SITE_NAME', 'PORT', 'DEPLOYED_URL', 'HOME_PAGE_CONTENT_ID',
+  'SITE_BRANCH', 'SITE_PREFIX', 'APP_SITE_NAME', 'PORT', 'DEPLOYED_URL', 'HOME_PAGE_CONTENT_ID',
   'ASSET_BASE_FOLDER_ID', 'MARK_TOOLS_NAME_PREFIX', 'MARK_TOOLS_TOKEN', 'ADMIN_PASSWORD', 'BASE_URL', 'DEV_HOSTS',
 ]);
 
@@ -481,7 +481,7 @@ async function main() {
     const site = new Map([
       ['SITE_BRANCH', branch],
       ['SITE_PREFIX', prefix],
-      ['SITE_NAME', JSON.stringify(name)],
+      ['APP_SITE_NAME', JSON.stringify(name)],
       ['PORT', String(port)],
       ['DEPLOYED_URL', siteUrl],
       ['HOME_PAGE_CONTENT_ID', startKey],
@@ -497,7 +497,7 @@ async function main() {
       if (!m) return line;
       const k = m[1];
       written.add(k);
-      if (['SITE_BRANCH', 'SITE_PREFIX', 'SITE_NAME'].includes(k)) return null; // written once, in the header
+      if (['SITE_BRANCH', 'SITE_PREFIX', 'APP_SITE_NAME'].includes(k)) return null; // written once, in the header
       if (site.has(k)) return `${k}=${site.get(k)}`;
       if (srcEnv.has(k) && !SITE_SPECIFIC_KEYS.has(k)) return `${k}=${srcEnv.get(k)}`;
       return line;
@@ -505,12 +505,12 @@ async function main() {
     const header = [
       '# Written by `yarn site:new` — this file belongs to ONE site replica (gitignored).',
       '# --- Site identity (the scripts refuse to run when SITE_BRANCH != the checked-out branch) ---',
-      ...['SITE_BRANCH', 'SITE_PREFIX', 'SITE_NAME'].map((k) => `${k}=${site.get(k)}`),
+      ...['SITE_BRANCH', 'SITE_PREFIX', 'APP_SITE_NAME'].map((k) => `${k}=${site.get(k)}`),
       '',
     ];
     const extra = [...srcEnv.entries()].filter(([k]) => !written.has(k) && !SITE_SPECIFIC_KEYS.has(k));
     const tail = extra.length ? ['', `# --- Copied from ${join(ROOT, '.env')} (shared credentials) ---`, ...extra.map(([k, v]) => `${k}=${v}`)] : [];
-    const missingSite = [...site.keys()].filter((k) => !written.has(k) && !['SITE_BRANCH', 'SITE_PREFIX', 'SITE_NAME'].includes(k));
+    const missingSite = [...site.keys()].filter((k) => !written.has(k) && !['SITE_BRANCH', 'SITE_PREFIX', 'APP_SITE_NAME'].includes(k));
     const siteTail = missingSite.length ? ['', '# --- Site values ---', ...missingSite.map((k) => `${k}=${site.get(k)}`)] : [];
     writeFileSync(envFile, [...header, ...body, ...tail, ...siteTail].join('\n').replace(/\n*$/, '\n'));
     console.log(`  ${ok(`wrote ${envFile}`)} ${c.dim('(new ADMIN_PASSWORD and MARK_TOOLS_TOKEN generated; not printed)')}`);
