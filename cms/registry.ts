@@ -12,6 +12,16 @@ import BlankExperience from './BlankExperience';
 import BlankSection from './BlankSection';
 import Page, { PageContentType } from './Page';
 import RichText, { RichTextContentType } from './RichText';
+// [WEN] optimizely.com home page blocks
+import WenHeroBanner, { WenHeroBannerContentType } from './WenHeroBanner';
+import WenLogoStrip, { WenLogoStripContentType, WenLogoItemContentType } from './WenLogoStrip';
+import WenProductCards, { WenProductCardsContentType, WenProductCardContentType } from './WenProductCards';
+import WenVideoFeature, { WenVideoFeatureContentType } from './WenVideoFeature';
+import WenMediaMarquee, { WenMediaMarqueeContentType } from './WenMediaMarquee';
+import WenZigzag, { WenZigzagContentType, WenZigzagRowContentType } from './WenZigzag';
+import WenStoryCarousel, { WenStoryCarouselContentType, WenStoryCardContentType } from './WenStoryCarousel';
+import WenImageBanner, { WenImageBannerContentType } from './WenImageBanner';
+import WenSignupForm, { WenSignupFormContentType } from './WenSignupForm';
 
 /**
  * Single configuration + registration point for the Optimizely SDK.
@@ -49,6 +59,20 @@ export const registeredContentTypes = [
   PageContentType,
   // Blocks
   RichTextContentType,
+  // [WEN] optimizely.com home page blocks (sections) and their inline item types
+  WenHeroBannerContentType,
+  WenLogoStripContentType,
+  WenLogoItemContentType,
+  WenProductCardsContentType,
+  WenProductCardContentType,
+  WenVideoFeatureContentType,
+  WenMediaMarqueeContentType,
+  WenZigzagContentType,
+  WenZigzagRowContentType,
+  WenStoryCarouselContentType,
+  WenStoryCardContentType,
+  WenImageBannerContentType,
+  WenSignupFormContentType,
 ];
 
 initContentTypeRegistry(registeredContentTypes);
@@ -62,5 +86,14 @@ initReactComponentRegistry({
     Page,
     // Blocks (resolver key === content-type key)
     RichTextBlock: RichText,
+    WenHeroBanner,
+    WenLogoStrip,
+    WenProductCards,
+    WenVideoFeature,
+    WenMediaMarquee,
+    WenZigzag,
+    WenStoryCarousel,
+    WenImageBanner,
+    WenSignupForm,
   },
 });

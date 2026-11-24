@@ -68,3 +68,13 @@ h2,
 h3 {
   font-family: var(--font-display);
 }
+
+/* [WEN] optimizely.com blocks: continuous logo / image marquee (two copies of the row, shift by half). */
+@keyframes wen-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[wen-marquee_80s_linear_infinite\],
+  .animate-\[wen-marquee_60s_linear_infinite\] { animation: none; }
+}

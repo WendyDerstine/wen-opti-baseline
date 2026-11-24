@@ -1,0 +1,116 @@
+import { contentType, type ContentProps } from '@optimizely/cms-sdk';
+import { getPreviewUtils } from '@optimizely/cms-sdk/react/server';
+import { linkHref, refSrc, type OptiLinkValue, type OptiRef } from './opti';
+import { StoryScroller } from './storyScroller';
+
+/** One customer story card (used inline by WenStoryCarousel, not on its own). */
+export const WenStoryCardContentType = contentType({
+  key: 'WenStoryCard',
+  baseType: '_component',
+  displayName: '[WEN] Story Card',
+  description: 'Customer logo, headline stat, attribution and photo, used inside [WEN] Story Carousel.',
+  properties: {
+    Logo: { type: 'contentReference', allowedTypes: ['_image'], displayName: 'Customer logo', sortOrder: 10 },
+    CustomerName: { type: 'string', displayName: 'Customer name (logo alt text)', sortOrder: 20 },
+    Stat: { type: 'string', displayName: 'Headline stat', isLocalized: true, sortOrder: 30 },
+    Attribution: {
+      type: 'string',
+      displayName: 'Attribution',
+      description: 'Name and title. A line break starts a new line.',
+      isLocalized: true,
+      sortOrder: 40,
+    },
+    Image: { type: 'contentReference', allowedTypes: ['_image'], displayName: 'Photo', sortOrder: 50 },
+    Link: { type: 'link', displayName: 'Story link', isLocalized: true, sortOrder: 60 },
+  },
+});
+
+/** "Stories of success": heading over a horizontally scrolling row of story cards with arrows. */
+export const WenStoryCarouselContentType = contentType({
+  key: 'WenStoryCarousel',
+  baseType: '_component',
+  displayName: '[WEN] Story Carousel',
+  description: 'Large heading over a scrolling carousel of customer story cards with arrow controls.',
+  compositionBehaviors: ['sectionEnabled'],
+  properties: {
+    Heading: { type: 'string', displayName: 'Heading', isLocalized: true, sortOrder: 10 },
+    Stories: {
+      type: 'array',
+      displayName: 'Stories',
+      sortOrder: 20,
+      items: { type: 'component', contentType: WenStoryCardContentType },
+    },
+  },
+});
+
+type Props = { content: ContentProps<typeof WenStoryCarouselContentType> };
+type Story = {
+  Logo?: OptiRef;
+  CustomerName?: string | null;
+  Stat?: string | null;
+  Attribution?: string | null;
+  Image?: OptiRef;
+  Link?: OptiLinkValue;
+};
+
+export default function WenStoryCarousel({ content }: Props) {
+  const { pa } = getPreviewUtils(content);
+  const block = (content as { __composition?: { key: string } }).__composition;
+  const stories = (content.Stories ?? []) as Story[];
+
+  return (
+    <section {...pa(block)} className="relative w-full bg-white pt-20 pb-28 lg:pt-32 lg:pb-40">
+      {content.Heading && (
+        <h2
+          {...pa('Heading')}
+          className="container mx-auto mb-12 px-4 text-center font-[family-name:var(--font-display)] text-[56px] leading-[0.9] font-extrabold tracking-[-0.01em] text-[#08251a] md:text-[64px] lg:text-[96px]"
+        >
+          {content.Heading}
+        </h2>
+      )}
+      <div {...pa('Stories')}>
+        <StoryScroller>
+          {stories.map((s, i) => {
+            const logo = refSrc(s.Logo);
+            const photo = refSrc(s.Image);
+            return (
+              <div key={i} data-story-card className="w-[min(892px,calc(100vw-32px))] shrink-0 snap-center">
+                <a
+                  href={linkHref(s.Link)}
+                  className="group flex h-full rounded-[16px] bg-[#d8e4cb] p-px md:rounded-[26px]"
+                >
+                  <div className="h-full w-full overflow-clip rounded-[15px] transition-all duration-200 group-hover:translate-x-1 group-hover:-translate-y-1 md:rounded-[25px]">
+                    <div className="flex h-full flex-col gap-2 rounded-[12px] bg-[#eff6e9] p-1 md:flex-row md:items-stretch md:gap-1.5 md:rounded-[20px] md:p-2">
+                      <div className="order-last flex flex-col gap-12 px-4 pt-2 pb-4 md:order-first md:flex-1 md:justify-between md:gap-8 md:p-6 md:pr-10">
+                        {logo ? (
+                          <img src={logo} alt={s.CustomerName ?? ''} className="h-10 w-32 self-start object-contain object-left brightness-0" />
+                        ) : (
+                          <span className="h-10" />
+                        )}
+                        <div className="flex flex-1 flex-col justify-center">
+                          {s.Stat && (
+                            <h3 className="line-clamp-4 pb-1 font-[family-name:var(--font-display)] text-2xl leading-[1.1] font-extrabold text-[#08251a] md:text-[48px]">
+                              {s.Stat}
+                            </h3>
+                          )}
+                        </div>
+                        <div className="text-xs leading-[1.35] whitespace-pre-line text-[#08251a] md:text-sm md:leading-[1.3]">
+                          {s.Attribution ?? ''}
+                        </div>
+                      </div>
+                      <div className="order-first md:order-last md:w-1/2 md:shrink-0">
+                        <div className="relative flex aspect-[8/7] items-center justify-center overflow-hidden rounded-xl md:size-full md:rounded-2xl">
+                          {photo && <img src={photo} alt={s.CustomerName ?? ''} className="absolute inset-0 size-full object-cover" />}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </a>
+              </div>
+            );
+          })}
+        </StoryScroller>
+      </div>
+    </section>
+  );
+}
