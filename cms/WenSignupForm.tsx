@@ -24,6 +24,16 @@ export const WenSignupFormContentType = contentType({
       isLocalized: true,
       sortOrder: 40,
     },
+    FormLayout: {
+      type: 'string',
+      displayName: 'Form layout',
+      description: 'Get started: sample-value placeholders (default). Request a demo: label placeholders, work email, challenges box and privacy note.',
+      sortOrder: 50,
+      enum: [
+        { value: 'getstarted', displayName: 'Get started' },
+        { value: 'demo', displayName: 'Request a demo' },
+      ],
+    },
   },
 });
 
@@ -37,6 +47,17 @@ const FIELDS: { name: string; type: string; placeholder: string; label: string }
   { name: 'company', type: 'text', placeholder: 'Optimizely', label: 'Company' },
   { name: 'title', type: 'text', placeholder: 'Chief Executive Officer', label: 'Job title' },
   { name: 'phone', type: 'tel', placeholder: '+1 234 567 8901', label: 'Phone' },
+];
+
+// "Request a demo" layout, as on optimizely.com/products/ai.
+const DEMO_FIELDS: { name: string; type: string; placeholder: string; full?: boolean }[] = [
+  { name: 'firstName', type: 'text', placeholder: 'First name' },
+  { name: 'lastName', type: 'text', placeholder: 'Last name' },
+  { name: 'email', type: 'email', placeholder: 'Work email', full: true },
+  { name: 'company', type: 'text', placeholder: 'Company' },
+  { name: 'title', type: 'text', placeholder: 'Job title' },
+  { name: 'phone', type: 'tel', placeholder: 'Phone' },
+  { name: 'country', type: 'text', placeholder: 'Country' },
 ];
 
 const INPUT =
@@ -73,28 +94,64 @@ export default function WenSignupForm({ content }: Props) {
                 {content.Body}
               </p>
             )}
-            <form action={linkHref(cta)} method="get" className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              {FIELDS.map((f) => (
-                <input key={f.name} name={f.name} type={f.type} placeholder={f.placeholder} aria-label={f.label} className={INPUT} />
-              ))}
-              <select name="country" aria-label="Country" defaultValue="" className={`${INPUT} md:col-span-2`}>
-                <option value="" disabled>
-                  Country
-                </option>
-                <option>United States</option>
-                <option>United Kingdom</option>
-                <option>Canada</option>
-                <option>Germany</option>
-                <option>Australia</option>
-              </select>
-              {cta?.text && (
-                <div className="pt-4 md:col-span-2">
-                  <button {...pa('Cta')} type="submit" className={BTN_LIME}>
-                    {cta.text}
-                  </button>
-                </div>
-              )}
-            </form>
+            {content.FormLayout === 'demo' ? (
+              <form action={linkHref(cta)} method="get" className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                {DEMO_FIELDS.map((f) => (
+                  <input
+                    key={f.name}
+                    name={f.name}
+                    type={f.type}
+                    placeholder={f.placeholder}
+                    aria-label={f.placeholder}
+                    className={`${INPUT} ${f.full ? 'md:col-span-2' : ''}`}
+                  />
+                ))}
+                <textarea
+                  name="challenges"
+                  placeholder="What challenges can we help you with?"
+                  aria-label="What challenges can we help you with?"
+                  rows={3}
+                  className={`${INPUT} h-24 py-3 md:col-span-2`}
+                />
+                {cta?.text && (
+                  <div className="pt-6 md:col-span-2">
+                    <button {...pa('Cta')} type="submit" className={BTN_LIME}>
+                      {cta.text}
+                    </button>
+                  </div>
+                )}
+                <p className="pt-2 text-xs leading-snug text-white/90 md:col-span-2 lg:pr-24">
+                  Optimizely will store and process your personal data as described in our{' '}
+                  <a href="https://www.optimizely.com/legal/privacy-notice/" className="underline">
+                    Privacy Notice
+                  </a>
+                  . Refer to the Privacy Notice for opt out. You can adjust your cookie settings in the footer.
+                </p>
+              </form>
+            ) : (
+              <form action={linkHref(cta)} method="get" className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {FIELDS.map((f) => (
+                  <input key={f.name} name={f.name} type={f.type} placeholder={f.placeholder} aria-label={f.label} className={INPUT} />
+                ))}
+                <select name="country" aria-label="Country" defaultValue="" className={`${INPUT} md:col-span-2`}>
+                  <option value="" disabled>
+                    Country
+                  </option>
+                  <option>United States</option>
+                  <option>United Kingdom</option>
+                  <option>Canada</option>
+                  <option>Germany</option>
+                  <option>Australia</option>
+                </select>
+                {cta?.text && (
+                  <div className="pt-4 md:col-span-2">
+                    <button {...pa('Cta')} type="submit" className={BTN_LIME}>
+                      {cta.text}
+                    </button>
+                  </div>
+                )}
+              </form>
+            )}
           </div>
         </div>
       </div>

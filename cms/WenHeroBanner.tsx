@@ -22,6 +22,16 @@ export const WenHeroBannerContentType = contentType({
     Heading: { type: 'string', displayName: 'Heading', isLocalized: true, sortOrder: 20 },
     Body: { type: 'string', displayName: 'Intro text', isLocalized: true, sortOrder: 30 },
     Cta: { type: 'link', displayName: 'Button', isLocalized: true, sortOrder: 40 },
+    HeadingLevel: {
+      type: 'string',
+      displayName: 'Heading level',
+      description: 'H1 for the page hero (default). H2 when this banner is used further down a page.',
+      sortOrder: 50,
+      enum: [
+        { value: 'h1', displayName: 'H1 (page hero)' },
+        { value: 'h2', displayName: 'H2 (section)' },
+      ],
+    },
   },
 });
 
@@ -32,6 +42,7 @@ export default function WenHeroBanner({ content }: Props) {
   const block = (content as { __composition?: { key: string } }).__composition;
   const bg = refSrc(content.BackgroundImage as OptiRef);
   const cta = content.Cta as OptiLinkValue;
+  const Heading = content.HeadingLevel === 'h2' ? 'h2' : 'h1';
 
   return (
     <section
@@ -48,10 +59,10 @@ export default function WenHeroBanner({ content }: Props) {
       )}
       <div className="relative z-10 flex grow flex-col">
         {content.Heading && (
-          <h1 {...pa('Heading')} className="mx-auto w-full max-w-[1000px] pt-2 pb-8">
+          <Heading {...pa('Heading')} className="mx-auto w-full max-w-[1000px] pt-2 pb-8">
             <span className="sr-only">{content.Heading}</span>
-            <ArcText text={content.Heading} id="wen-hero-arc" />
-          </h1>
+            <ArcText text={content.Heading} id={`wen-arc-${block?.key ?? Heading}`} />
+          </Heading>
         )}
         <div className="mt-auto grid w-full grid-cols-1 lg:grid-cols-12">
           <div className="flex flex-col items-center gap-8 text-center lg:col-span-4 lg:items-start lg:text-left xl:col-span-3">

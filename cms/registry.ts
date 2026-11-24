@@ -22,6 +22,16 @@ import WenZigzag, { WenZigzagContentType, WenZigzagRowContentType } from './WenZ
 import WenStoryCarousel, { WenStoryCarouselContentType, WenStoryCardContentType } from './WenStoryCarousel';
 import WenImageBanner, { WenImageBannerContentType } from './WenImageBanner';
 import WenSignupForm, { WenSignupFormContentType } from './WenSignupForm';
+// [WEN] optimizely.com/products/ai page blocks
+import WenSplitHero, { WenSplitHeroContentType } from './WenSplitHero';
+import WenStatCards, { WenStatCardsContentType, WenStatItemContentType } from './WenStatCards';
+import WenFeatureRows, { WenFeatureRowsContentType, WenFeatureRowContentType } from './WenFeatureRows';
+import WenFeatureGrid, { WenFeatureGridContentType, WenFeatureGridItemContentType } from './WenFeatureGrid';
+import WenTextCards, { WenTextCardsContentType, WenTextCardContentType } from './WenTextCards';
+import WenCalloutPanel, { WenCalloutPanelContentType } from './WenCalloutPanel';
+import WenAgentCarousel, { WenAgentCarouselContentType, WenAgentCardContentType } from './WenAgentCarousel';
+import WenTimeline, { WenTimelineContentType, WenTimelineStepContentType } from './WenTimeline';
+import WenFaq, { WenFaqContentType, WenFaqItemContentType } from './WenFaq';
 
 /**
  * Single configuration + registration point for the Optimizely SDK.
@@ -73,6 +83,23 @@ export const registeredContentTypes = [
   WenStoryCardContentType,
   WenImageBannerContentType,
   WenSignupFormContentType,
+  // [WEN] optimizely.com/products/ai page blocks (sections) and their inline item types
+  WenSplitHeroContentType,
+  WenStatCardsContentType,
+  WenStatItemContentType,
+  WenFeatureRowsContentType,
+  WenFeatureRowContentType,
+  WenFeatureGridContentType,
+  WenFeatureGridItemContentType,
+  WenTextCardsContentType,
+  WenTextCardContentType,
+  WenCalloutPanelContentType,
+  WenAgentCarouselContentType,
+  WenAgentCardContentType,
+  WenTimelineContentType,
+  WenTimelineStepContentType,
+  WenFaqContentType,
+  WenFaqItemContentType,
 ];
 
 initContentTypeRegistry(registeredContentTypes);
@@ -95,5 +122,14 @@ initReactComponentRegistry({
     WenStoryCarousel,
     WenImageBanner,
     WenSignupForm,
+    WenSplitHero,
+    WenStatCards,
+    WenFeatureRows,
+    WenFeatureGrid,
+    WenTextCards,
+    WenCalloutPanel,
+    WenAgentCarousel,
+    WenTimeline,
+    WenFaq,
   },
 });

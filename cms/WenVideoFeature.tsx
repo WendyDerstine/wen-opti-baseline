@@ -18,6 +18,12 @@ export const WenVideoFeatureContentType = contentType({
     Body: { type: 'string', displayName: 'Intro text', isLocalized: true, sortOrder: 30 },
     Cta: { type: 'link', displayName: 'Button', isLocalized: true, sortOrder: 40 },
     Video: { type: 'contentReference', allowedTypes: ['_video'], displayName: 'Video', sortOrder: 50 },
+    JoinAbove: {
+      type: 'boolean',
+      displayName: 'Join the section above',
+      description: 'Removes the top gap and rounded corners so this section continues a dark section above it.',
+      sortOrder: 60,
+    },
   },
 });
 
@@ -32,7 +38,11 @@ export default function WenVideoFeature({ content }: Props) {
   return (
     <section
       {...pa(block)}
-      className="relative mt-24 w-full rounded-t-[24px] bg-[#08251a] px-2 pt-20 pb-32 text-white lg:mt-32 lg:rounded-t-[40px] lg:px-8 lg:pt-32 lg:pb-40"
+      className={`relative w-full bg-[#08251a] px-2 text-white lg:px-8 ${
+        content.JoinAbove
+          ? 'pt-12 pb-32 lg:pb-40'
+          : 'mt-24 rounded-t-[24px] pt-20 pb-32 lg:mt-32 lg:rounded-t-[40px] lg:pt-32 lg:pb-40'
+      }`}
     >
       <div className="container mx-auto">
         <div className="mx-auto flex max-w-3xl flex-col items-center py-8 text-center">

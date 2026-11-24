@@ -128,7 +128,8 @@ export function SplitHeading({
  * hidden from assistive tech; pair it with a visually hidden copy of the text.
  */
 export function ArcText({ text, id }: { text: string; id: string }): ReactNode {
-  const FS = 120; // font size in viewBox units
+  // Font size in viewBox units: full size fits ~19 characters on the arc; longer text scales down.
+  const FS = Math.round(120 * Math.min(1, 19 / Math.max(1, text.length)));
   const layers = [4, 3, 2, 1, 0]; // back to front
   return createElement(
     'svg',

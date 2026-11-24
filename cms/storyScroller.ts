@@ -31,19 +31,19 @@ function Arrow({ dir }: { dir: 'prev' | 'next' }) {
   );
 }
 
-export function StoryScroller({ children }: { children: ReactNode }) {
+/**
+ * `layout="peek"` (default): cards centred with neighbours peeking in (stories).
+ * `layout="single"`: one card visible at a time inside a 912px frame (agents).
+ */
+export function StoryScroller({ children, layout = 'peek' }: { children: ReactNode; layout?: 'peek' | 'single' }) {
+  const track =
+    layout === 'single'
+      ? 'mx-auto flex w-full max-w-[912px] snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+      : 'flex w-full snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth px-4 py-2 [scrollbar-width:none] lg:px-[max(1rem,calc((100vw-892px)/2))] [&::-webkit-scrollbar]:hidden';
   return createElement(
     'div',
     { 'data-story-root': '', className: 'flex flex-col items-center gap-10' },
-    createElement(
-      'div',
-      {
-        'data-story-track': '',
-        className:
-          'flex w-full snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth px-4 py-2 [scrollbar-width:none] lg:px-[max(1rem,calc((100vw-892px)/2))] [&::-webkit-scrollbar]:hidden',
-      },
-      children,
-    ),
+    createElement('div', { 'data-story-track': '', className: track }, children),
     createElement('div', { className: 'flex gap-3' }, createElement(Arrow, { dir: 'prev' }), createElement(Arrow, { dir: 'next' })),
   );
 }
