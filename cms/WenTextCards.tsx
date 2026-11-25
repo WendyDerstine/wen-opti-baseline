@@ -25,6 +25,16 @@ export const WenTextCardsContentType = contentType({
     Heading: { type: 'string', displayName: 'Heading', isLocalized: true, sortOrder: 10 },
     Body: { type: 'string', displayName: 'Intro text', isLocalized: true, sortOrder: 20 },
     Cta: { type: 'link', displayName: 'Button', isLocalized: true, sortOrder: 30 },
+    Layout: {
+      type: 'string',
+      displayName: 'Layout',
+      description: 'Centred heading over green cards (default), or a lime panel with a left-aligned heading over white cards.',
+      sortOrder: 35,
+      enum: [
+        { value: 'centered', displayName: 'Centred heading, green cards' },
+        { value: 'panel', displayName: 'Lime panel, white cards' },
+      ],
+    },
     Cards: {
       type: 'array',
       displayName: 'Cards',
@@ -42,6 +52,50 @@ export default function WenTextCards({ content }: Props) {
   const block = (content as { __composition?: { key: string } }).__composition;
   const cta = content.Cta as OptiLinkValue;
   const cards = (content.Cards ?? []) as Card[];
+
+  if (content.Layout === 'panel') {
+    const cols = cards.length >= 4 ? 'lg:grid-cols-4' : cards.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-2';
+    return (
+      <section {...pa(block)} className={`${SECTION_CARD} w-full bg-white px-2 pt-20 pb-8 lg:px-8`}>
+        <div className="container mx-auto">
+          <div className="rounded-[16px] bg-[#abff44] p-4 lg:rounded-[24px] lg:p-8">
+            <div className="max-w-2xl pb-8 lg:max-w-[50%]">
+              {content.Heading && (
+                <h2
+                  {...pa('Heading')}
+                  className="font-[family-name:var(--font-display)] text-[44px] leading-[0.9] font-extrabold tracking-[-0.01em] text-[#08251a] md:text-[56px] lg:text-[64px]"
+                >
+                  {content.Heading}
+                </h2>
+              )}
+              {content.Body && (
+                <p {...pa('Body')} className="mt-6 text-lg leading-snug whitespace-pre-line text-[#08251a]">
+                  {content.Body}
+                </p>
+              )}
+              {cta?.text && (
+                <a {...pa('Cta')} href={linkHref(cta)} target={cta.target ?? undefined} className={`mt-6 ${BTN_DARK}`}>
+                  {cta.text}
+                </a>
+              )}
+            </div>
+            <div {...pa('Cards')} className={`grid grid-cols-1 gap-4 md:grid-cols-2 ${cols}`}>
+              {cards.map((c, i) => (
+                <div key={i} className="flex flex-col gap-4 rounded-[12px] bg-white p-6 lg:rounded-[16px]">
+                  {c.Title && (
+                    <h3 className="font-[family-name:var(--font-display)] text-xl leading-none font-extrabold text-[#08251a] md:text-2xl lg:text-[26px]">
+                      {c.Title}
+                    </h3>
+                  )}
+                  {c.Body && <p className="text-base leading-snug text-[#08251a] lg:text-lg">{c.Body}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section {...pa(block)} className={`${SECTION_CARD} w-full bg-white px-2 pt-20 pb-28 lg:px-8 lg:pt-32 lg:pb-40`}>

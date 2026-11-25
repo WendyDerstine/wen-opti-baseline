@@ -1,6 +1,6 @@
 import { contentType, type ContentProps } from '@optimizely/cms-sdk';
 import { getPreviewUtils } from '@optimizely/cms-sdk/react/server';
-import { linkHref, refSrc, type OptiLinkValue, type OptiRef } from './opti';
+import { BTN_DARK, ExtrudedText, linkHref, refSrc, type OptiLinkValue, type OptiRef } from './opti';
 import { StoryScroller } from './storyScroller';
 
 /** One customer story card (used inline by WenStoryCarousel, not on its own). */
@@ -34,6 +34,10 @@ export const WenStoryCarouselContentType = contentType({
   compositionBehaviors: ['sectionEnabled'],
   properties: {
     Heading: { type: 'string', displayName: 'Heading', isLocalized: true, sortOrder: 10 },
+    HeadingLine2: { type: 'string', displayName: 'Heading line 2 (extruded, optional)', isLocalized: true, sortOrder: 12 },
+    HeadingLine3: { type: 'string', displayName: 'Heading line 3 (optional)', isLocalized: true, sortOrder: 14 },
+    Body: { type: 'string', displayName: 'Intro text (optional)', isLocalized: true, sortOrder: 16 },
+    Cta: { type: 'link', displayName: 'Button (optional)', isLocalized: true, sortOrder: 18 },
     Stories: {
       type: 'array',
       displayName: 'Stories',
@@ -57,35 +61,70 @@ export default function WenStoryCarousel({ content }: Props) {
   const { pa } = getPreviewUtils(content);
   const block = (content as { __composition?: { key: string } }).__composition;
   const stories = (content.Stories ?? []) as Story[];
+  const cta = content.Cta as OptiLinkValue;
+  const intro = Boolean(content.HeadingLine2 || content.HeadingLine3 || content.Body || cta?.text);
 
   return (
     <section {...pa(block)} className="relative w-full bg-white pt-20 pb-28 lg:pt-32 lg:pb-40">
-      {content.Heading && (
+      {(content.Heading || content.HeadingLine2 || content.HeadingLine3) && (
         <h2
-          {...pa('Heading')}
-          className="container mx-auto mb-12 px-4 text-center font-[family-name:var(--font-display)] text-[56px] leading-[0.9] font-extrabold tracking-[-0.01em] text-[#08251a] md:text-[64px] lg:text-[96px]"
+          className={`container mx-auto px-4 text-center font-[family-name:var(--font-display)] text-[56px] leading-[0.9] font-extrabold tracking-[-0.01em] text-[#08251a] md:text-[64px] lg:text-[96px] ${
+            intro ? 'mb-6' : 'mb-12'
+          }`}
         >
-          {content.Heading}
+          {content.Heading && (
+            <span {...pa('Heading')} className="block">
+              {content.Heading}
+            </span>
+          )}
+          {content.HeadingLine2 && (
+            <span {...pa('HeadingLine2')} className="block pt-[0.1em] lg:text-[112px]">
+              <ExtrudedText text={content.HeadingLine2} />
+            </span>
+          )}
+          {content.HeadingLine3 && (
+            <span {...pa('HeadingLine3')} className="block">
+              {content.HeadingLine3}
+            </span>
+          )}
         </h2>
+      )}
+      {(content.Body || cta?.text) && (
+        <div className="mx-auto mb-12 flex max-w-2xl flex-col items-center gap-8 px-4 text-center lg:mb-16">
+          {content.Body && (
+            <p {...pa('Body')} className="text-lg leading-snug text-[#08251a]">
+              {content.Body}
+            </p>
+          )}
+          {cta?.text && (
+            <a {...pa('Cta')} href={linkHref(cta)} target={cta.target ?? undefined} className={BTN_DARK}>
+              {cta.text}
+            </a>
+          )}
+        </div>
       )}
       <div {...pa('Stories')}>
         <StoryScroller>
           {stories.map((s, i) => {
             const logo = refSrc(s.Logo);
             const photo = refSrc(s.Image);
+            // Cards link only when a URL is set; otherwise they render as plain cards.
+            const Card = s.Link?.url?.default ? 'a' : 'div';
             return (
               <div key={i} data-story-card className="w-[min(892px,calc(100vw-32px))] shrink-0 snap-center">
-                <a
-                  href={linkHref(s.Link)}
+                <Card
+                  {...(Card === 'a' ? { href: linkHref(s.Link) } : {})}
                   className="group flex h-full rounded-[16px] bg-[#d8e4cb] p-px md:rounded-[26px]"
                 >
-                  <div className="h-full w-full overflow-clip rounded-[15px] transition-all duration-200 group-hover:translate-x-1 group-hover:-translate-y-1 md:rounded-[25px]">
+                  <div
+                    className={`h-full w-full overflow-clip rounded-[15px] transition-all duration-200 md:rounded-[25px] ${
+                      Card === 'a' ? 'group-hover:translate-x-1 group-hover:-translate-y-1' : ''
+                    }`}
+                  >
                     <div className="flex h-full flex-col gap-2 rounded-[12px] bg-[#eff6e9] p-1 md:flex-row md:items-stretch md:gap-1.5 md:rounded-[20px] md:p-2">
                       <div className="order-last flex flex-col gap-12 px-4 pt-2 pb-4 md:order-first md:flex-1 md:justify-between md:gap-8 md:p-6 md:pr-10">
-                        {logo ? (
+                        {logo && (
                           <img src={logo} alt={s.CustomerName ?? ''} className="h-10 w-32 self-start object-contain object-left brightness-0" />
-                        ) : (
-                          <span className="h-10" />
                         )}
                         <div className="flex flex-1 flex-col justify-center">
                           {s.Stat && (
@@ -105,7 +144,7 @@ export default function WenStoryCarousel({ content }: Props) {
                       </div>
                     </div>
                   </div>
-                </a>
+                </Card>
               </div>
             );
           })}

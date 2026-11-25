@@ -27,6 +27,16 @@ export const WenProductCardsContentType = contentType({
   properties: {
     HeadingLine1: { type: 'string', displayName: 'Heading line 1', isLocalized: true, sortOrder: 10 },
     HeadingLine2: { type: 'string', displayName: 'Heading line 2 (extruded)', isLocalized: true, sortOrder: 20 },
+    Body: { type: 'string', displayName: 'Intro text (optional)', isLocalized: true, sortOrder: 25 },
+    CtaStyle: {
+      type: 'string',
+      displayName: 'Card link style',
+      sortOrder: 28,
+      enum: [
+        { value: 'button', displayName: 'Dark button (default)' },
+        { value: 'link', displayName: 'Text link with arrow' },
+      ],
+    },
     Cards: {
       type: 'array',
       displayName: 'Cards',
@@ -49,6 +59,9 @@ export default function WenProductCards({ content }: Props) {
   const { pa } = getPreviewUtils(content);
   const block = (content as { __composition?: { key: string } }).__composition;
   const cards = (content.Cards ?? []) as Card[];
+  const textLink = content.CtaStyle === 'link';
+  // A single plain heading (no extruded line) sits smaller, as on the solution pages.
+  const plainOnly = !content.HeadingLine2;
 
   return (
     <section {...pa(block)} className={`${SECTION_CARD} w-full bg-white px-2 pt-20 pb-8 lg:px-8 lg:pt-32`}>
@@ -56,10 +69,15 @@ export default function WenProductCards({ content }: Props) {
         <SplitHeading
           line1={content.HeadingLine1}
           line2={content.HeadingLine2}
-          className="text-center"
+          className={`text-center ${plainOnly ? 'lg:text-[64px]' : ''}`}
           attrs1={pa('HeadingLine1')}
           attrs2={pa('HeadingLine2')}
         />
+        {content.Body && (
+          <p {...pa('Body')} className="mx-auto mt-6 max-w-2xl text-center text-lg leading-snug text-[#08251a]">
+            {content.Body}
+          </p>
+        )}
       </div>
       <div {...pa('Cards')} className="container mx-auto flex flex-col gap-4 py-8 lg:flex-row">
         {cards.map((card, i) => {
@@ -92,11 +110,19 @@ export default function WenProductCards({ content }: Props) {
                   {card.Description && (
                     <p className="text-sm leading-[1.3] text-[#08251a] md:text-2xl/tight">{card.Description}</p>
                   )}
-                  {card.Cta?.text && (
-                    <div className="mt-auto flex">
-                      <span className={BTN_DARK}>{card.Cta.text}</span>
-                    </div>
-                  )}
+                  {card.Cta?.text &&
+                    (textLink ? (
+                      <span className="mt-auto inline-flex items-center gap-2 text-base font-medium text-[#08251a] md:text-lg">
+                        {card.Cta.text}
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden className="transition-transform duration-200 group-hover:translate-x-1">
+                          <path d="m9 6 6 6-6 6" />
+                        </svg>
+                      </span>
+                    ) : (
+                      <div className="mt-auto flex">
+                        <span className={BTN_DARK}>{card.Cta.text}</span>
+                      </div>
+                    ))}
                 </div>
               </a>
             </div>

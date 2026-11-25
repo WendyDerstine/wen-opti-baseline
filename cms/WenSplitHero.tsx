@@ -1,6 +1,6 @@
 import { contentType, type ContentProps } from '@optimizely/cms-sdk';
 import { getPreviewUtils } from '@optimizely/cms-sdk/react/server';
-import { BTN_LIME, SplitHeading, linkHref, refSrc, type OptiLinkValue, type OptiRef } from './opti';
+import { BTN_DARK, BTN_LIME, SplitHeading, linkHref, refSrc, type OptiLinkValue, type OptiRef } from './opti';
 
 /**
  * Product page hero (optimizely.com/products/ai): breadcrumb pills, a two-line
@@ -32,6 +32,32 @@ export const WenSplitHeroContentType = contentType({
     },
     Cta: { type: 'link', displayName: 'Button', isLocalized: true, sortOrder: 40 },
     Video: { type: 'contentReference', allowedTypes: ['_video'], displayName: 'Video', sortOrder: 50 },
+    Image: {
+      type: 'contentReference',
+      allowedTypes: ['_image'],
+      displayName: 'Image (image layout)',
+      description: 'Used by the "Text left, image right" layout.',
+      sortOrder: 55,
+    },
+    Layout: {
+      type: 'string',
+      displayName: 'Layout',
+      description: 'Heading left / text right with a video below (default), or heading, text and button left with an image right.',
+      sortOrder: 60,
+      enum: [
+        { value: 'video', displayName: 'Heading left, text right, video below' },
+        { value: 'image', displayName: 'Text left, image right' },
+      ],
+    },
+    ButtonStyle: {
+      type: 'string',
+      displayName: 'Button colour',
+      sortOrder: 65,
+      enum: [
+        { value: 'lime', displayName: 'Lime (default)' },
+        { value: 'dark', displayName: 'Dark' },
+      ],
+    },
   },
 });
 
@@ -44,6 +70,9 @@ export default function WenSplitHero({ content }: Props) {
   const cta = content.Cta as OptiLinkValue;
   const video = refSrc(content.Video as OptiRef);
   const paragraphs = (content.Body ?? '').split(/\n+/).map((p) => p.trim()).filter(Boolean);
+  const image = refSrc(content.Image as OptiRef);
+  const btn = content.ButtonStyle === 'dark' ? BTN_DARK : BTN_LIME;
+  const imageLayout = content.Layout === 'image';
 
   return (
     <section {...pa(block)} className="relative w-full bg-white px-7 pt-20">
@@ -77,6 +106,34 @@ export default function WenSplitHero({ content }: Props) {
             </ol>
           </nav>
         )}
+        {imageLayout ? (
+          <div className="mt-8 grid grid-cols-1 items-center gap-x-4 gap-y-8 pb-20 md:grid-cols-2 lg:gap-x-24 lg:pb-28">
+            <div className="flex flex-col gap-6">
+              <SplitHeading
+                line1={content.HeadingLine1}
+                line2={content.HeadingLine2}
+                className="text-left lg:text-[60px] xl:text-[64px]"
+                attrs1={pa('HeadingLine1')}
+                attrs2={pa('HeadingLine2')}
+              />
+              <div {...pa('Body')} className="flex flex-col gap-3 pr-6 text-lg leading-snug text-[#08251a] lg:pr-12 lg:text-xl">
+                {paragraphs.map((p, i) => (
+                  <p key={i}>{p}</p>
+                ))}
+              </div>
+              {cta?.text && (
+                <a {...pa('Cta')} href={linkHref(cta)} target={cta.target ?? undefined} className={`self-start ${btn}`}>
+                  {cta.text}
+                </a>
+              )}
+            </div>
+            {image && (
+              <figure className="relative aspect-square overflow-hidden rounded-[12px] lg:rounded-[16px]">
+                <img {...pa('Image')} src={image} alt="" className="absolute inset-0 size-full object-contain" />
+              </figure>
+            )}
+          </div>
+        ) : (
         <div className="mt-8 grid grid-cols-12 items-center gap-x-4 gap-y-8 lg:mt-12">
           <div className="col-span-full md:col-span-7">
             <SplitHeading
@@ -94,13 +151,14 @@ export default function WenSplitHero({ content }: Props) {
               ))}
             </div>
             {cta?.text && (
-              <a {...pa('Cta')} href={linkHref(cta)} target={cta.target ?? undefined} className={`mt-6 ${BTN_LIME}`}>
+              <a {...pa('Cta')} href={linkHref(cta)} target={cta.target ?? undefined} className={`mt-6 ${btn}`}>
                 {cta.text}
               </a>
             )}
           </div>
         </div>
-        {video && (
+        )}
+        {!imageLayout && video && (
           <figure {...pa('Video')} className="mt-12 lg:mt-16">
             <video src={video} autoPlay loop muted playsInline className="h-auto w-full rounded-[12px] lg:rounded-3xl" />
           </figure>

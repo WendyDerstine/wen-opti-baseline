@@ -24,6 +24,15 @@ export const WenFaqContentType = contentType({
   compositionBehaviors: ['sectionEnabled'],
   properties: {
     Heading: { type: 'string', displayName: 'Heading', isLocalized: true, sortOrder: 10 },
+    ItemStyle: {
+      type: 'string',
+      displayName: 'Question style',
+      sortOrder: 15,
+      enum: [
+        { value: 'filled', displayName: 'Green boxes (default)' },
+        { value: 'plain', displayName: 'Plain (no box)' },
+      ],
+    },
     Items: {
       type: 'array',
       displayName: 'Questions',
@@ -54,7 +63,7 @@ export default function WenFaq({ content }: Props) {
         )}
         <div {...pa('Items')} className="mx-auto flex max-w-4xl flex-col gap-4">
           {items.map((it, i) => (
-            <details key={i} className="group overflow-clip rounded-2xl bg-[#eff6e9]">
+            <details key={i} className={`group overflow-clip rounded-2xl ${content.ItemStyle === 'plain' ? 'bg-white' : 'bg-[#eff6e9]'}`}>
               <summary className="flex cursor-pointer list-none items-center justify-between gap-8 px-8 py-6 text-base leading-tight font-medium text-[#08251a] md:text-xl [&::-webkit-details-marker]:hidden">
                 <h3 className="font-sans">{it.Question}</h3>
                 <svg

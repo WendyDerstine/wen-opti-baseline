@@ -26,6 +26,15 @@ export const WenTimelineContentType = contentType({
     Heading: { type: 'string', displayName: 'Heading', isLocalized: true, sortOrder: 10 },
     Body: { type: 'string', displayName: 'Intro text', isLocalized: true, sortOrder: 20 },
     Cta: { type: 'link', displayName: 'Button', isLocalized: true, sortOrder: 30 },
+    Background: {
+      type: 'string',
+      displayName: 'Background',
+      sortOrder: 35,
+      enum: [
+        { value: 'white', displayName: 'White section, green cards (default)' },
+        { value: 'green', displayName: 'Green section, white cards' },
+      ],
+    },
     Steps: {
       type: 'array',
       displayName: 'Steps',
@@ -38,11 +47,11 @@ export const WenTimelineContentType = contentType({
 type Props = { content: ContentProps<typeof WenTimelineContentType> };
 type Step = { Image?: OptiRef; Title?: string | null; Body?: string | null };
 
-function StepCard({ step }: { step: Step }) {
+function StepCard({ step, onGreen = false }: { step: Step; onGreen?: boolean }) {
   const src = refSrc(step.Image);
   return (
-    <div className="flex w-full max-w-md flex-col gap-6 rounded-[16px] bg-[#eff6e9] p-2 pb-8">
-      <figure className="relative aspect-video overflow-hidden rounded-[12px]">
+    <div className={`flex w-full max-w-md flex-col gap-6 rounded-[16px] p-2 pb-8 ${onGreen ? 'bg-white' : 'bg-[#eff6e9]'}`}>
+      <figure className={`relative aspect-video overflow-hidden rounded-[12px] ${onGreen ? 'bg-[#e4f0da]' : ''}`}>
         {src && <img src={src} alt="" className="absolute inset-0 size-full object-cover" />}
       </figure>
       <div className="flex flex-col gap-4 px-2 md:px-4">
@@ -62,9 +71,13 @@ export default function WenTimeline({ content }: Props) {
   const block = (content as { __composition?: { key: string } }).__composition;
   const cta = content.Cta as OptiLinkValue;
   const steps = (content.Steps ?? []) as Step[];
+  const green = content.Background === 'green';
 
   return (
-    <section {...pa(block)} className={`${SECTION_CARD} w-full bg-white px-2 pt-20 pb-28 lg:px-8 lg:pt-32 lg:pb-40`}>
+    <section
+      {...pa(block)}
+      className={`${SECTION_CARD} w-full px-2 pt-20 pb-28 lg:px-8 lg:pt-32 lg:pb-40 ${green ? 'bg-[#eff6e9]' : 'bg-white'}`}
+    >
       <div className="container mx-auto">
         <div className="mx-auto mb-8 flex max-w-2xl flex-col items-center gap-8 py-8 text-center">
           {content.Heading && (
@@ -93,7 +106,7 @@ export default function WenTimeline({ content }: Props) {
             const left = i % 2 === 0;
             return (
               <li key={i} className="relative grid grid-cols-[24px_1fr] items-center gap-x-4 lg:grid-cols-[1fr_96px_1fr] lg:gap-x-0">
-                <div className={`hidden lg:flex lg:justify-end ${left ? '' : 'lg:invisible'}`}>{left && <StepCard step={s} />}</div>
+                <div className={`hidden lg:flex lg:justify-end ${left ? '' : 'lg:invisible'}`}>{left && <StepCard step={s} onGreen={green} />}</div>
                 <div className="relative z-10 flex items-center justify-center">
                   <span
                     className={`size-4 rounded-full outline-[3px] outline-[#c3ceaf] ${i === 0 ? 'bg-[#abff44] outline-[#08251a]' : 'bg-[#d8e4cb]'}`}
@@ -101,9 +114,9 @@ export default function WenTimeline({ content }: Props) {
                 </div>
                 <div className="lg:flex lg:justify-start">
                   <div className="lg:hidden">
-                    <StepCard step={s} />
+                    <StepCard step={s} onGreen={green} />
                   </div>
-                  <div className="hidden lg:block lg:w-full">{!left && <StepCard step={s} />}</div>
+                  <div className="hidden lg:block lg:w-full">{!left && <StepCard step={s} onGreen={green} />}</div>
                 </div>
               </li>
             );

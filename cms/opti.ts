@@ -111,7 +111,10 @@ export function SplitHeading({
   return createElement(
     'h2',
     {
-      className: `w-full font-[family-name:var(--font-display)] text-[48px] leading-[0.95] font-extrabold tracking-[-0.01em] md:text-[64px] lg:text-[96px] ${className}`,
+      // A size override in className (e.g. lg:text-[64px]) replaces the default large size.
+      className: `w-full font-[family-name:var(--font-display)] text-[48px] leading-[0.95] font-extrabold tracking-[-0.01em] md:text-[64px] ${
+        /lg:text-\[/.test(className) ? '' : 'lg:text-[96px]'
+      } ${className}`,
     },
     line1
       ? createElement('span', { ...attrs1, className: `block ${dark ? 'text-white' : 'text-[#08251a]'}` }, line1)
